@@ -3,18 +3,25 @@ import json
 import os
 from collections import defaultdict
 
-import agentops
-import colorama
 import ollama
-import weave
-from groq import AsyncGroq, Groq
+from groq import Groq
 from llama_index.core import Document, SimpleDirectoryReader
-from llama_index.core.schema import ImageDocument
 from llama_index.core.node_parser import TokenTextSplitter
+from llama_index.core.schema import ImageDocument
 from termcolor import colored
 
+try:
+    from agentops.sdk.decorators import operation
+except ImportError:
+    # Fallback for older versions or if decorators are not available
+    def operation(name=None, version=None):
+        def decorator(func):
+            return func
 
-@agentops.record_function("get directory summaries")
+        return decorator
+
+
+@operation(name="get directory summaries")
 async def get_dir_summaries(path: str):
     doc_dicts = load_documents(path)
     # metadata = process_metadata(doc_dicts)
@@ -40,7 +47,7 @@ async def get_dir_summaries(path: str):
     # ]
 
 
-@agentops.record_function("load documents")
+@operation(name="load documents")
 def load_documents(path: str):
     reader = SimpleDirectoryReader(
         input_dir=path,
@@ -76,7 +83,7 @@ def load_documents(path: str):
     return documents
 
 
-@agentops.record_tool("process_metadata")
+@operation(name="process_metadata")
 def process_metadata(doc_dicts):
     file_seen = set()
     metadata_list = []
@@ -196,7 +203,7 @@ async def get_summaries(documents):
     return summaries
 
 
-@agentops.record_function("merge")
+@operation(name="merge")
 def merge_summary_documents(summaries, metadata_list):
     list_summaries = defaultdict(list)
 
@@ -247,8 +254,8 @@ def summarize_document_sync(doc, client):
 You will be provided with the contents of a file along with its metadata. Provide a summary of the contents. The purpose of the summary is to organize files based on their content. To this end provide a concise but informative summary. Make the summary as specific to the file as possible.
 
 Write your response a JSON object with the following schema:
-    
-```json 
+
+```json
 {
     "file_path": "path to the file including name",
     "summary": "summary of the content"
