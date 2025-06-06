@@ -9,6 +9,12 @@ LlamaFS is a self-organizing file manager that automatically renames and organiz
 - **Python Backend** (`/`): FastAPI server that processes files using Llama3 via Groq/Ollama
 - **Electron Frontend** (`/electron-react-app/`): Desktop application providing the user interface
 
+## Git Commit Rules
+
+**CRITICAL: Never use HEREDOC for commit messages** - it causes ANSI color code pollution.
+
+See `COMMIT_RULES.md` for complete guidelines on proper commit message formatting.
+
 ## Development Commands
 
 ### Python Backend
