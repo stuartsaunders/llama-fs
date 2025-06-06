@@ -1,31 +1,37 @@
 import { Button } from '@nextui-org/button';
 import { Input } from '@nextui-org/input';
 import React, { useState } from 'react';
-import FileIcon from './Icons/FileIcon';
 import FolderIcon from './Icons/FolderIcon';
-import LayoutGridIcon from './Icons/LayoutGridIcon';
-import ListIcon from './Icons/ListIcon';
-import PlusIcon from './Icons/PlusIcon';
-import UploadIcon from './Icons/UploadIcon';
-import ListOrderedIcon from './Icons/ListOrderedIcon';
-import files from '../files.json';
 import FileLine from './FileLine';
 import FileDetails from './FileDetails';
 import WandIcon from './Icons/WandIcon';
-import TelescopeIcon from './Icons/TelescopeIcon';
 import TelescopeButton from './TelescopeButton';
-import EnterIcon from './Icons/EnterIcon';
 import UpdateSettings from './UpdateSettings';
-import ollamaWave from '../../../assets/ollama_wave.gif'
-import llamaFsLogo from '../../../assets/llama_fs.png'
+import ollamaWave from '../../../assets/ollama_wave.gif';
+import llamaFsLogo from '../../../assets/llama_fs.png';
 
-const supportedFileTypes = ['.pdf', '.txt', '.png', '.jpg', '.jpeg', '.pptx', '.docx', '.xlsx'];
+const supportedFileTypes = [
+  '.pdf',
+  '.txt',
+  '.png',
+  '.jpg',
+  '.jpeg',
+  '.pptx',
+  '.docx',
+  '.xlsx',
+];
 
 function preorderTraversal(
   node: { name: string; children?: any[]; summary?: string; src_path?: string },
   prevfilename: string,
   depth: number,
-  result: { filename: string; fullfilename: string; depth: number; summary?: string; src_path?: string }[] = [],
+  result: {
+    filename: string;
+    fullfilename: string;
+    depth: number;
+    summary?: string;
+    src_path?: string;
+  }[] = [],
 ) {
   result.push({
     filename: node.name,
@@ -49,25 +55,46 @@ function preorderTraversal(
   return result;
 }
 
-function buildTree(paths) {
-  const root = { name: 'root', children: [] };
+interface PathData {
+  src_path: string;
+  dst_path: string;
+  summary: string;
+}
+
+interface TreeNode {
+  name: string;
+  children?: TreeNode[];
+  summary?: string;
+  src_path?: string;
+}
+
+interface FileData {
+  filename: string;
+  fullfilename: string;
+  depth: number;
+  summary?: string;
+  src_path?: string;
+}
+
+function buildTree(paths: PathData[]) {
+  const root: TreeNode = { name: 'root', children: [] };
 
   paths.forEach(({ src_path, dst_path, summary }) => {
     const parts = dst_path.split('/');
     let currentLevel = root.children;
 
-    parts.forEach((part, index) => {
-      let existingPath = currentLevel.find((p) => p.name === part);
+    parts.forEach((part: string, index: number) => {
+      let existingPath = currentLevel?.find((p: TreeNode) => p.name === part);
 
       if (!existingPath) {
         if (index === parts.length - 1) {
           // It's a file, include the summary and source path
-          existingPath = { name: part, summary: summary, src_path: src_path };
+          existingPath = { name: part, summary, src_path };
         } else {
           // It's a directory
           existingPath = { name: part, children: [] };
         }
-        currentLevel.push(existingPath);
+        currentLevel?.push(existingPath);
       }
 
       if (existingPath.children) {
@@ -79,65 +106,115 @@ function buildTree(paths) {
   return root;
 }
 
-
 function MainScreen() {
   const [watchMode, setWatchMode] = useState(false);
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [filePath, setFilePath] = useState('/Users/reibs/Projects/llama-fs/sample_data');
+  const [selectedFile, setSelectedFile] = useState<FileData | null>(null);
+  const [filePath, setFilePath] = useState(
+    '/Users/stuartsaunders/Projects/llama-fs/sample_data',
+  );
   const [loading, setLoading] = useState(false);
 
   // Function to handle file selection
-  const handleFileSelect = (fileData: any) => {
+  const handleFileSelect = (fileData: FileData) => {
     setSelectedFile(fileData);
   };
 
-  const [newOldMap, setNewOldMap] = useState([]);
-  const [preOrderedFiles, setPreOrderedFiles] = useState([]);
+  const [newOldMap, setNewOldMap] = useState<PathData[]>([]);
+  const [preOrderedFiles, setPreOrderedFiles] = useState<FileData[]>([]);
   // const preOrderedFiles = preorderTraversal(files, '', -1).slice(1);
-  const [acceptedState, setAcceptedState] = React.useState([]);
+  const [acceptedState, setAcceptedState] = React.useState<
+    Record<string, boolean>
+  >({});
 
   const handleBatch = async () => {
     setLoading(true);
-    const response = await fetch('http://localhost:8000/batch', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        path: filePath
-        // path: '/Users/reibs/Projects/llama-fs/sample_data',
-      }),
-    });
-    const data = await response.json();
-    setNewOldMap(data);
-    const treeData = buildTree(data);
-    const preOrderedTreeData = preorderTraversal(treeData, '', -1).slice(1);
-    setPreOrderedFiles(preOrderedTreeData);
-    setAcceptedState(
-      preOrderedTreeData.reduce(
-        (acc, file) => ({ ...acc, [file.fullfilename]: false }),
-        {},
-      ),
-    );
-    setLoading(false);
+    try {
+      const response = await fetch('http://localhost:8000/batch', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          path: filePath,
+          // path: '/Users/reibs/Projects/llama-fs/sample_data',
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(
+          `Server error: ${response.status} ${response.statusText}`,
+        );
+      }
+
+      const data = await response.json();
+      setNewOldMap(data);
+      const treeData = buildTree(data);
+      const preOrderedTreeData = preorderTraversal(treeData, '', -1).slice(1);
+      setPreOrderedFiles(preOrderedTreeData);
+      setAcceptedState(
+        preOrderedTreeData.reduce(
+          (acc, file) => ({ ...acc, [file.fullfilename]: false }),
+          {},
+        ),
+      );
+    } catch (error) {
+      console.error('Failed to process batch:', error);
+      let errorMessage = 'Unknown error occurred';
+
+      if (error instanceof TypeError && error.message === 'Failed to fetch') {
+        errorMessage =
+          'Cannot connect to the server. Please ensure the FastAPI server is running on http://localhost:8000';
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+
+      alert(`Error: ${errorMessage}`);
+    } finally {
+      setLoading(false);
+    }
   };
   const handleWatch = async () => {
     setLoading(true);
-    const response = await fetch('http://localhost:8000/batch', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        path: filePath
-        // path: '/Users/reibs/Projects/llama-fs/sample_data',
-      }),
-    });
+    try {
+      const response = await fetch('http://localhost:8000/batch', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          path: filePath,
+          // path: '/Users/reibs/Projects/llama-fs/sample_data',
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(
+          `Server error: ${response.status} ${response.statusText}`,
+        );
+      }
+    } catch (error) {
+      console.error('Failed to start watch mode:', error);
+      let errorMessage = 'Unknown error occurred';
+
+      if (error instanceof TypeError && error.message === 'Failed to fetch') {
+        errorMessage =
+          'Cannot connect to the server. Please ensure the FastAPI server is running on http://localhost:8000';
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+
+      alert(`Error: ${errorMessage}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
-
   const handleConfirmSelectedChanges = async () => {
-    const returnedObj = [];
+    const returnedObj: Array<{
+      base_path: string;
+      src_path: string;
+      dst_path: string;
+    }> = [];
     preOrderedFiles.forEach((file) => {
       const isAccepted = acceptedState[file.fullfilename];
       if (isAccepted) {
@@ -146,33 +223,70 @@ function MainScreen() {
           const acceptedChangeMap = newOldMap.find(
             (change) => change.dst_path === noRootFileName,
           );
-          returnedObj.push({
-            base_path: filePath,
-            src_path: acceptedChangeMap.src_path,
-            dst_path: acceptedChangeMap.dst_path
-          });
+          if (acceptedChangeMap) {
+            returnedObj.push({
+              base_path: filePath,
+              src_path: acceptedChangeMap.src_path,
+              dst_path: acceptedChangeMap.dst_path,
+            });
+          }
         }
       }
     });
 
-    console.log(returnedObj)
+    console.log(returnedObj);
 
     // commit endpoint only supports 1 change at a time
-    returnedObj.forEach(async (change) => {
-      const response = await fetch('http://localhost:8000/commit', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(change),
-      });
-      console.log(response);
-    });
+    const commitPromises = returnedObj.map(
+      async (change: {
+        base_path: string;
+        src_path: string;
+        dst_path: string;
+      }) => {
+        try {
+          const response = await fetch('http://localhost:8000/commit', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(change),
+          });
+
+          if (!response.ok) {
+            throw new Error(
+              `Server error: ${response.status} ${response.statusText}`,
+            );
+          }
+
+          console.log('Commit successful:', response);
+          return { success: true, change };
+        } catch (error) {
+          console.error('Failed to commit change:', error, change);
+          return { success: false, change, error };
+        }
+      },
+    );
+
+    try {
+      const results = await Promise.all(commitPromises);
+      const failures = results.filter((result) => !result.success);
+
+      if (failures.length > 0) {
+        alert(
+          `Failed to commit ${failures.length} out of ${results.length} changes. Check console for details.`,
+        );
+      } else {
+        alert(`Successfully committed ${results.length} changes.`);
+      }
+    } catch (error) {
+      console.error('Error processing commits:', error);
+      alert('Error processing file changes. Check console for details.');
+    }
 
     // clean objects
     setNewOldMap([]);
     setPreOrderedFiles([]);
-    setAcceptedState([]);
+    setAcceptedState({});
   };
 
   // Add the className 'dark' to main div to enable dark mode
@@ -185,15 +299,26 @@ function MainScreen() {
             Llama-FS
           </span>
         </div>
-        <nav className="flex flex-col gap-2" >
-          <div className="bg-white p-2 rounded">
-            /Users/reibs/Projects/llama-fs/sample_data
+        <nav className="flex flex-col gap-2">
+          <div
+            className="bg-white p-2 rounded cursor-pointer hover:bg-gray-100 transition-colors"
+            onClick={() =>
+              setFilePath('/Users/stuartsaunders/Projects/llama-fs/sample_data')
+            }
+          >
+            /Users/stuartsaunders/Projects/llama-fs/sample_data
           </div>
-          <div className="bg-white p-2 rounded">
-            /Users/reibs/Downloads
+          <div
+            className="bg-white p-2 rounded cursor-pointer hover:bg-gray-100 transition-colors"
+            onClick={() => setFilePath('/Users/stuartsaunders/Downloads')}
+          >
+            /Users/stuartsaunders/Downloads
           </div>
-          <div className="bg-white p-2 rounded">
-            /Users/reibs/Projects/ollama
+          <div
+            className="bg-white p-2 rounded cursor-pointer hover:bg-gray-100 transition-colors"
+            onClick={() => setFilePath('/Users/stuartsaunders/Desktop')}
+          >
+            /Users/stuartsaunders/Desktop
           </div>
         </nav>
       </div>
@@ -205,7 +330,8 @@ function MainScreen() {
               placeholder="Enter file path"
               type="text"
               onChange={(e) => setFilePath(e.target.value)}
-              defaultValue='/Users/reibs/Projects/llama-fs/sample_data'
+              defaultValue="/Users/stuartsaunders/Projects/llama-fs/sample_data"
+              value={filePath}
               style={{
                 width: '400px',
               }}
@@ -229,23 +355,36 @@ function MainScreen() {
             {loading ? (
               // Existing loading block
               <div className="flex flex-col items-center">
-                <h2 className="text-lg font-semibold mb-2">Reading and classifying your files...</h2>
+                <h2 className="text-lg font-semibold mb-2">
+                  Reading and classifying your files...
+                </h2>
                 <div className="flex justify-center" style={{ width: '50%' }}>
-                  <img src={ollamaWave} alt="Loading..." style={{ width: '100%' }} />
+                  <img
+                    src={ollamaWave}
+                    alt="Loading..."
+                    style={{ width: '100%' }}
+                  />
                 </div>
               </div>
             ) : preOrderedFiles.length === 0 ? (
               // Render llamaFsLogo and supported file types when not loading and no files
-              <div className="flex flex-col items-center" style={{ height: '100%' }}>
+              <div
+                className="flex flex-col items-center"
+                style={{ height: '100%' }}
+              >
                 <h1 className="text-lg font-semibold mb-2">Llama-FS</h1>
                 <p>Organize your drive with LLMs. </p>
                 <div className="flex justify-center" style={{ width: '50%' }}>
-                  <img src={llamaFsLogo} alt="Llama FS Logo" style={{ width: '100%' }} />
+                  <img
+                    src={llamaFsLogo}
+                    alt="Llama FS Logo"
+                    style={{ width: '100%' }}
+                  />
                 </div>
                 <p className="text-center mt-4">Supported file types:</p>
                 <ul className="list-disc text-center">
-                  {supportedFileTypes.map((type, index) => (
-                    <li key={index}>{type}</li>
+                  {supportedFileTypes.map((type) => (
+                    <li key={type}>{type}</li>
                   ))}
                 </ul>
               </div>
