@@ -15,6 +15,7 @@ import WandIcon from './Icons/WandIcon';
 import TelescopeIcon from './Icons/TelescopeIcon';
 import TelescopeButton from './TelescopeButton';
 import EnterIcon from './Icons/EnterIcon';
+import UpdateSettings from './UpdateSettings';
 import ollamaWave from '../../../assets/ollama_wave.gif'
 import llamaFsLogo from '../../../assets/llama_fs.png'
 
@@ -265,8 +266,9 @@ function MainScreen() {
               </div>
             ))}
           </div>
-          <div className="w-1/2 overflow-auto p-4">
+          <div className="w-1/2 overflow-auto p-4 space-y-4">
             <FileDetails fileData={selectedFile} />
+            <UpdateSettings />
             {/* Container for explaining the data in the file line that's selected */}
             {/* This container will be populated with content dynamically based on the selected FileLine */}
           </div>

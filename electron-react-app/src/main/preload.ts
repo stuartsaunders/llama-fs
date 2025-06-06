@@ -22,6 +22,11 @@ const electronHandler = {
       ipcRenderer.once(channel, (_event, ...args) => func(...args));
     },
   },
+  updates: {
+    getUpdateSettings: () => ipcRenderer.invoke('get-update-settings'),
+    setUpdateSettings: (enabled: boolean) => ipcRenderer.invoke('set-update-settings', enabled),
+    checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
+  },
 };
 
 contextBridge.exposeInMainWorld('electron', electronHandler);

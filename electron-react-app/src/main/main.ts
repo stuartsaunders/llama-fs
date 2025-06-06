@@ -19,16 +19,45 @@ class AppUpdater {
   constructor() {
     log.transports.file.level = 'info';
     autoUpdater.logger = log;
+    // Don't auto-check for updates - only when user enables it
+  }
+
+  checkForUpdates() {
     autoUpdater.checkForUpdatesAndNotify();
   }
 }
 
 let mainWindow: BrowserWindow | null = null;
+let appUpdater: AppUpdater | null = null;
+
+// User settings store (in production, consider using electron-store)
+const userSettings = {
+  autoUpdateEnabled: false, // Default to disabled for privacy
+};
 
 ipcMain.on('ipc-example', async (event, arg) => {
   const msgTemplate = (pingPong: string) => `IPC test: ${pingPong}`;
   console.log(msgTemplate(arg));
   event.reply('ipc-example', msgTemplate('pong'));
+});
+
+// Handle update settings
+ipcMain.handle('get-update-settings', () => {
+  return userSettings.autoUpdateEnabled;
+});
+
+ipcMain.handle('set-update-settings', (event, enabled: boolean) => {
+  userSettings.autoUpdateEnabled = enabled;
+  if (enabled && appUpdater) {
+    appUpdater.checkForUpdates();
+  }
+  return userSettings.autoUpdateEnabled;
+});
+
+ipcMain.handle('check-for-updates', () => {
+  if (appUpdater) {
+    appUpdater.checkForUpdates();
+  }
 });
 
 if (process.env.NODE_ENV === 'production') {
@@ -107,9 +136,8 @@ const createWindow = async () => {
     return { action: 'deny' };
   });
 
-  // Remove this if your app does not use auto updates
-  // eslint-disable-next-line
-  new AppUpdater();
+  // Initialize AppUpdater but don't auto-check (user must opt-in)
+  appUpdater = new AppUpdater();
 };
 
 /**
