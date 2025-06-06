@@ -1,4 +1,6 @@
-function ListOrderedIcon(props: any) {
+import React from 'react';
+
+function ListOrderedIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
       {...props}

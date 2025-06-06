@@ -1,4 +1,6 @@
-function WandIcon(props: any) {
+import React from 'react';
+
+function WandIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
       {...props}

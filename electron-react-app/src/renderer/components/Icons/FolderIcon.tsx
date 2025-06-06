@@ -1,4 +1,6 @@
-function FolderIcon(props: any) {
+import React from 'react';
+
+function FolderIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
       {...props}

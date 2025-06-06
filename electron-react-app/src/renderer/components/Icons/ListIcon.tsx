@@ -1,4 +1,6 @@
-function ListIcon(props) {
+import React from 'react';
+
+function ListIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
       {...props}

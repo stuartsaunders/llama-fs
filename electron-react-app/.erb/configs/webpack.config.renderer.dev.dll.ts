@@ -5,10 +5,13 @@
 import webpack from 'webpack';
 import path from 'path';
 import { merge } from 'webpack-merge';
-import baseConfig from './webpack.config.base';
-import webpackPaths from './webpack.paths';
-import { dependencies } from '../../package.json';
-import checkNodeEnv from '../scripts/check-node-env';
+import baseConfig from './webpack.config.base.ts';
+import webpackPaths from './webpack.paths.ts';
+import packageJson from '../../package.json' with { type: 'json' };
+import checkNodeEnv from '../scripts/check-node-env.js';
+// import rendererDevConfig from './webpack.config.renderer.dev.ts'; // Commented out to avoid circular dependency
+
+const { dependencies } = packageJson;
 
 checkNodeEnv('development');
 
@@ -26,9 +29,24 @@ const configuration: webpack.Configuration = {
   externals: ['fsevents', 'crypto-browserify'],
 
   /**
-   * Use `module` from `webpack.config.renderer.dev.js`
+   * Basic module configuration for DLL
    */
-  module: require('./webpack.config.renderer.dev').default.module,
+  module: {
+    rules: [
+      {
+        test: /\.css$/,
+        use: ['style-loader', 'css-loader'],
+      },
+      {
+        test: /\.(woff|woff2|eot|ttf|otf)$/i,
+        type: 'asset/resource',
+      },
+      {
+        test: /\.(png|jpg|jpeg|gif)$/i,
+        type: 'asset/resource',
+      },
+    ],
+  },
 
   entry: {
     renderer: Object.keys(dependencies || {}),

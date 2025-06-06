@@ -12,7 +12,7 @@ import path from 'path';
 import { app, BrowserWindow, shell, ipcMain } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
-import MenuBuilder from './menu';
+import MenuBuilder from './menu.ts';
 import { resolveHtmlPath } from './util';
 
 class AppUpdater {
@@ -23,7 +23,7 @@ class AppUpdater {
   }
 
   checkForUpdates() {
-    autoUpdater.checkForUpdatesAndNotify();
+    return autoUpdater.checkForUpdatesAndNotify();
   }
 }
 
@@ -87,7 +87,7 @@ const installExtensions = async () => {
 
 const createWindow = async () => {
   if (isDebug) {
-    await installExtensions();
+    await installExtensions(); // Commented out to prevent network requests
   }
 
   const RESOURCES_PATH = app.isPackaged

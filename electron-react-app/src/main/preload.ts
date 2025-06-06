@@ -24,7 +24,8 @@ const electronHandler = {
   },
   updates: {
     getUpdateSettings: () => ipcRenderer.invoke('get-update-settings'),
-    setUpdateSettings: (enabled: boolean) => ipcRenderer.invoke('set-update-settings', enabled),
+    setUpdateSettings: (enabled: boolean) =>
+      ipcRenderer.invoke('set-update-settings', enabled),
     checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
   },
 };

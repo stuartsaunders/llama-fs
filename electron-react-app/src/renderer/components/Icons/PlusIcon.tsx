@@ -1,4 +1,6 @@
-function PlusIcon(props: any) {
+import React from 'react';
+
+function PlusIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
       {...props}

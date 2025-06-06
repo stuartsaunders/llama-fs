@@ -1,4 +1,6 @@
-function ImageIcon(props) {
+import React from 'react';
+
+function ImageIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
       {...props}

@@ -1,4 +1,6 @@
-function VideoIcon(props: any) {
+import React from 'react';
+
+function VideoIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
       {...props}

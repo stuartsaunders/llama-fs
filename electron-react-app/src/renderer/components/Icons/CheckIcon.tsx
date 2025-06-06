@@ -1,4 +1,6 @@
-function CheckIcon(props: any) {
+import React from 'react';
+
+function CheckIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
       {...props}

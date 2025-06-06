@@ -1,4 +1,6 @@
-function LayoutGridIcon(props: any) {
+import React from 'react';
+
+function LayoutGridIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
       {...props}

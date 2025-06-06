@@ -1,4 +1,6 @@
-function TelescopeIcon(props: any) {
+import React from 'react';
+
+function TelescopeIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
       {...props}

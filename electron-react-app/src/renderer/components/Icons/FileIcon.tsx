@@ -1,4 +1,6 @@
-function FileIcon(props: any) {
+import React from 'react';
+
+function FileIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
       {...props}

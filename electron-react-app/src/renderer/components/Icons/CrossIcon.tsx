@@ -1,4 +1,6 @@
-function CrossIcon(props: any) {
+import React from 'react';
+
+function CrossIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
       {...props}

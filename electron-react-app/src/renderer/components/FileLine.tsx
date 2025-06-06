@@ -51,18 +51,18 @@ function FileLine({
   }
   // weird paddingleft is a hack as pl is not working always
   return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginLeft: `${indentation > 1 ? indentation * 20 : 0}px`,
-
-    }}>
-      {indentation > 0
-        &&
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginLeft: `${indentation > 1 ? indentation * 20 : 0}px`,
+      }}
+    >
+      {indentation > 0 && (
         <div
           style={{
-            marginLeft: '10px'
+            marginLeft: '10px',
           }}
         >
           <svg
@@ -80,7 +80,7 @@ function FileLine({
             />
           </svg>
         </div>
-      }
+      )}
       <div
         className={`${acceptedState[fullfilename] ? 'bg-green-100' : 'bg-white'} dark:bg-gray-950 rounded-md shadow-sm hover:shadow-md transition-shadow border border-gray-200 dark:border-gray-700 mx-2`}
       >

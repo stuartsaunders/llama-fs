@@ -1,4 +1,6 @@
-function HomeIcon(props: any) {
+import React from 'react';
+
+function HomeIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
       {...props}

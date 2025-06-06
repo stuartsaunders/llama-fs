@@ -35,7 +35,7 @@ if (
       'The DLL files are missing. Sit back while we build them for you with "npm run build-dll"',
     ),
   );
-  execSync('npm run postinstall');
+  execSync('npm run build:dll');
 }
 
 const configuration: webpack.Configuration = {
@@ -104,7 +104,7 @@ const configuration: webpack.Configuration = {
       : [
           new webpack.DllReferencePlugin({
             context: webpackPaths.dllPath,
-            manifest: require(manifest),
+            manifest: manifest,
             sourceType: 'var',
           }),
         ]),

@@ -1,4 +1,6 @@
-function MusicIcon(props: any) {
+import React from 'react';
+
+function MusicIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
       {...props}

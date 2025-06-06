@@ -1,4 +1,6 @@
-function UploadIcon(props: any) {
+import React from 'react';
+
+function UploadIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
       {...props}

@@ -1,4 +1,6 @@
-function EnterIcon(props: any) {
+import React from 'react';
+
+function EnterIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
       {...props}
