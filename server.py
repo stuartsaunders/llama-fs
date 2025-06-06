@@ -22,20 +22,26 @@ from src.watch_utils import create_file_tree as create_watch_file_tree
 
 load_dotenv()
 
-# Initialize AgentOps if API key is available
-try:
-    agentops.init(tags=["llama-fs"], auto_start_session=False)
-    AGENTOPS_ENABLED = True
-except Exception as e:
-    print(f"AgentOps initialization failed: {e}")
-    print("Continuing without AgentOps tracking...")
-    AGENTOPS_ENABLED = False
+# Initialize AgentOps only if explicitly enabled and API key is available
+AGENTOPS_ENABLED = False
+if os.environ.get("AGENTOPS_ENABLED", "false").lower() == "true" and os.environ.get("AGENTOPS_API_KEY"):
+    try:
+        agentops.init(tags=["llama-fs"], auto_start_session=False)
+        AGENTOPS_ENABLED = True
+        print("AgentOps tracking enabled")
+    except Exception as e:
+        print(f"AgentOps initialization failed: {e}")
+        print("Continuing without AgentOps tracking...")
+        AGENTOPS_ENABLED = False
+else:
+    print("AgentOps tracking disabled (not enabled in settings)")
 
 
 class Request(BaseModel):
     path: Optional[str] = None
     instruction: Optional[str] = None
     incognito: Optional[bool] = False
+    llm_provider: Optional[str] = None  # "local" or "groq"
 
 
 class CommitRequest(BaseModel):
@@ -62,6 +68,57 @@ async def root():
     return {"message": "Hello World"}
 
 
+@app.get("/llm-config")
+async def get_llm_config():
+    return {
+        "current_provider": os.environ.get("LLM_PROVIDER", "local"),
+        "local_llm_base_url": os.environ.get("LOCAL_LLM_BASE_URL", "http://127.0.0.1:1234"),
+        "groq_configured": bool(os.environ.get("GROQ_API_KEY"))
+    }
+
+
+@app.get("/agentops-config")
+async def get_agentops_config():
+    return {
+        "agentops_enabled": os.environ.get("AGENTOPS_ENABLED", "false").lower() == "true",
+        "agentops_configured": bool(os.environ.get("AGENTOPS_API_KEY"))
+    }
+
+
+class LLMConfigRequest(BaseModel):
+    provider: str  # "local" or "groq"
+    local_llm_base_url: Optional[str] = None
+
+
+@app.post("/llm-config")
+async def set_llm_config(config: LLMConfigRequest):
+    os.environ["LLM_PROVIDER"] = config.provider
+    
+    if config.local_llm_base_url:
+        os.environ["LOCAL_LLM_BASE_URL"] = config.local_llm_base_url
+    
+    return {"message": "LLM configuration updated", "provider": config.provider}
+
+
+class AgentOpsConfigRequest(BaseModel):
+    enabled: bool
+
+
+@app.post("/agentops-config")
+async def set_agentops_config(config: AgentOpsConfigRequest):
+    global AGENTOPS_ENABLED
+    
+    os.environ["AGENTOPS_ENABLED"] = "true" if config.enabled else "false"
+    
+    # Note: AgentOps initialization requires server restart to take effect
+    # We update the environment variable for future sessions
+    return {
+        "message": "AgentOps configuration updated (restart server for changes to take effect)",
+        "enabled": config.enabled,
+        "restart_required": True
+    }
+
+
 @app.post("/batch")
 async def batch(request: Request):
     session = None
@@ -71,10 +128,23 @@ async def batch(request: Request):
     path = request.path
     if not os.path.exists(path):
         raise HTTPException(status_code=400, detail="Path does not exist in filesystem")
+    
+    # Set LLM provider for this request (temporarily override environment)
+    original_provider = os.environ.get("LLM_PROVIDER")
+    if request.llm_provider:
+        os.environ["LLM_PROVIDER"] = request.llm_provider
 
-    summaries = await get_dir_summaries(path)
-    # Get file tree
-    files = create_file_tree(summaries, session)
+    try:
+        summaries = await get_dir_summaries(path)
+        # Get file tree
+        files = create_file_tree(summaries, session)
+    finally:
+        # Restore original provider
+        if original_provider:
+            os.environ["LLM_PROVIDER"] = original_provider
+        elif request.llm_provider:
+            # Remove the temporary override
+            os.environ.pop("LLM_PROVIDER", None)
 
     # Recursively create dictionary from file paths
     tree = {}

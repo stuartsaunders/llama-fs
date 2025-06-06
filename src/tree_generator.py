@@ -1,6 +1,8 @@
-from groq import Groq
 import json
 import os
+
+import ollama
+from groq import Groq
 
 FILE_PROMPT = """
 You will be provided with list of source files and a summary of their contents. For each file, propose a new path and filename, using a directory structure that optimally organizes the files using known conventions and best practices.
@@ -28,16 +30,37 @@ Your response must be a JSON object with the following schema:
 
 
 def create_file_tree(summaries: list, session):
-    client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
-    chat_completion = client.chat.completions.create(
-        messages=[
-            {"role": "system", "content": FILE_PROMPT},
-            {"role": "user", "content": json.dumps(summaries)},
-        ],
-        model="llama-3.1-70b-versatile",
-        response_format={"type": "json_object"},  # Uncomment if needed
-        temperature=0,
-    )
+    llm_provider = os.environ.get("LLM_PROVIDER", "local").lower()
 
-    file_tree = json.loads(chat_completion.choices[0].message.content)["files"]
+    if llm_provider == "groq":
+        # Use Groq
+        client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+        chat_completion = client.chat.completions.create(
+            messages=[
+                {"role": "system", "content": FILE_PROMPT},
+                {"role": "user", "content": json.dumps(summaries)},
+            ],
+            model="llama-3.1-70b-versatile",
+            response_format={"type": "json_object"},
+            temperature=0,
+        )
+        file_tree = json.loads(chat_completion.choices[0].message.content)["files"]
+    else:
+        # Use local LLM API (Ollama, LM Studio, etc.)
+        local_llm_base_url = os.environ.get("LOCAL_LLM_BASE_URL", "http://127.0.0.1:1234")
+
+        client = ollama.Client(host=local_llm_base_url)
+
+        response = client.chat(
+            model="",  # Let the local API use its default model
+            messages=[
+                {"role": "system", "content": FILE_PROMPT},
+                {"role": "user", "content": json.dumps(summaries)},
+            ],
+            format="json",
+            options={"temperature": 0},
+        )
+
+        file_tree = json.loads(response["message"]["content"])["files"]
+
     return file_tree
