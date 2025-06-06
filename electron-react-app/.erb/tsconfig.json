@@ -1,0 +1,20 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "module": "esnext",
+    "target": "es2022",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
+    "noEmit": true
+  },
+  "ts-node": {
+    "esm": true,
+    "transpileOnly": true,
+    "compilerOptions": {
+      "module": "esnext"
+    }
+  }
+}
