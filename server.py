@@ -1,26 +1,18 @@
 import json
 import os
-import pathlib
 import queue
-from collections import defaultdict
+import shutil
 from pathlib import Path
 from typing import Optional
-import time
-import shutil  # Add this import at the beginning of your file
 
 import agentops
-import colorama
-import ollama
-import threading
 from asciitree import LeftAligned
 from asciitree.drawing import BOX_LIGHT, BoxStyle
+from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
-from groq import Groq
-from llama_index.core import SimpleDirectoryReader
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from termcolor import colored
 from watchdog.observers import Observer
 
 from src.loader import get_dir_summaries
@@ -28,11 +20,9 @@ from src.tree_generator import create_file_tree
 from src.watch_utils import Handler
 from src.watch_utils import create_file_tree as create_watch_file_tree
 
-from dotenv import load_dotenv
 load_dotenv()
 
-agentops.init(tags=["llama-fs"],
-              auto_start_session=False)
+agentops.init(tags=["llama-fs"], auto_start_session=False)
 
 
 class Request(BaseModel):
@@ -49,9 +39,7 @@ class CommitRequest(BaseModel):
 
 app = FastAPI()
 
-origins = [
-    "*"
-]
+origins = ["*"]
 
 app.add_middleware(
     CORSMiddleware,
@@ -72,8 +60,7 @@ async def batch(request: Request):
     session = agentops.start_session(tags=["LlamaFS"])
     path = request.path
     if not os.path.exists(path):
-        raise HTTPException(
-            status_code=400, detail="Path does not exist in filesystem")
+        raise HTTPException(status_code=400, detail="Path does not exist in filesystem")
 
     summaries = await get_dir_summaries(path)
     # Get file tree
@@ -97,8 +84,7 @@ async def batch(request: Request):
         # file["dst_path"] = os.path.join(path, file["dst_path"])
         file["summary"] = summaries[files.index(file)]["summary"]
 
-    agentops.end_session(
-        "Success", end_state_reason="Reorganized directory structure")
+    agentops.end_session("Success", end_state_reason="Reorganized directory structure")
     return files
 
 
@@ -106,8 +92,7 @@ async def batch(request: Request):
 async def watch(request: Request):
     path = request.path
     if not os.path.exists(path):
-        raise HTTPException(
-            status_code=400, detail="Path does not exist in filesystem")
+        raise HTTPException(status_code=400, detail="Path does not exist in filesystem")
 
     response_queue = queue.Queue()
 
@@ -131,12 +116,12 @@ async def watch(request: Request):
 
 @app.post("/commit")
 async def commit(request: CommitRequest):
-    print('*'*80)
+    print("*" * 80)
     print(request)
     print(request.base_path)
     print(request.src_path)
     print(request.dst_path)
-    print('*'*80)
+    print("*" * 80)
 
     src = os.path.join(request.base_path, request.src_path)
     dst = os.path.join(request.base_path, request.dst_path)
@@ -158,8 +143,7 @@ async def commit(request: CommitRequest):
             shutil.move(src, dst)
     except Exception as e:
         raise HTTPException(
-            status_code=500,
-            detail=f"An error occurred while moving the resource: {e}"
+            status_code=500, detail=f"An error occurred while moving the resource: {e}"
         )
 
     return {"message": "Commit successful"}

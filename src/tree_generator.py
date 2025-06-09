@@ -1,6 +1,6 @@
-from groq import Groq
 import json
 import os
+import litellm
 
 FILE_PROMPT = """
 You will be provided with list of source files and a summary of their contents. For each file, propose a new path and filename, using a directory structure that optimally organizes the files using known conventions and best practices.
@@ -27,17 +27,54 @@ Your response must be a JSON object with the following schema:
 """.strip()
 
 
-def create_file_tree(summaries: list, session):
-    client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
-    chat_completion = client.chat.completions.create(
-        messages=[
-            {"role": "system", "content": FILE_PROMPT},
-            {"role": "user", "content": json.dumps(summaries)},
-        ],
-        model="llama-3.1-70b-versatile",
-        response_format={"type": "json_object"},  # Uncomment if needed
-        temperature=0,
-    )
-
-    file_tree = json.loads(chat_completion.choices[0].message.content)["files"]
+def create_file_tree(summaries: list, session, model=None):
+    """Generate file organization tree using LiteLLM"""
+    if model is None:
+        model = os.getenv("MODEL_TEXT", "groq/llama-3.3-70b-versatile")
+    
+    try:
+        response = litellm.completion(
+            model=model,
+            messages=[
+                {"role": "system", "content": FILE_PROMPT},
+                {"role": "user", "content": json.dumps(summaries)},
+            ],
+            temperature=0,
+            max_tokens=2000
+        )
+        
+        content = response.choices[0].message.content.strip()
+        
+        # Try to extract JSON from response
+        try:
+            # Try direct parse first
+            parsed = json.loads(content)
+        except json.JSONDecodeError:
+            # Look for JSON in markdown blocks
+            if "{" in content and "}" in content:
+                start = content.find("{")
+                end = content.rfind("}") + 1
+                if start >= 0 and end > start:
+                    try:
+                        parsed = json.loads(content[start:end])
+                    except json.JSONDecodeError:
+                        parsed = None
+            else:
+                parsed = None
+        
+        if parsed and "files" in parsed:
+            file_tree = parsed["files"]
+        else:
+            # Fallback if parsing fails
+            raise json.JSONDecodeError("Could not extract files array", content, 0)
+        
+    except json.JSONDecodeError as e:
+        print(f"JSON parse error in tree generation: {e}")
+        # Fallback: keep original structure
+        file_tree = [{"src_path": s["file_path"], "dst_path": s["file_path"]} for s in summaries]
+    except Exception as e:
+        print(f"Error generating file tree: {e}")
+        # Fallback: keep original structure  
+        file_tree = [{"src_path": s["file_path"], "dst_path": s["file_path"]} for s in summaries]
+    
     return file_tree
