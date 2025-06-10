@@ -74,7 +74,14 @@ async def get_dir_summaries(path: str):
 
     # Convert path to relative path
     for summary in summaries:
-        summary["file_path"] = os.path.relpath(summary["file_path"], path)
+        if "file_path" in summary and summary["file_path"] != "unknown":
+            try:
+                summary["file_path"] = os.path.relpath(summary["file_path"], path)
+            except (ValueError, OSError) as e:
+                print(f"Warning: Could not convert path to relative: {summary.get('file_path', 'missing')}")
+                # Keep the original path if conversion fails
+        else:
+            print(f"Warning: Summary missing valid file_path: {summary}")
 
     return summaries
 
@@ -93,21 +100,28 @@ async def get_dir_summaries(path: str):
 
 @operation(name="load documents")
 def load_documents(path: str):
-    reader = SimpleDirectoryReader(
-        input_dir=path,
-        recursive=True,
-        required_exts=[
-            ".pdf",
-            # ".docx",
-            # ".py",
-            ".txt",
-            # ".md",
-            ".png",
-            ".jpg",
-            ".jpeg",
-            # ".ts",
-        ],
-    )
+    try:
+        reader = SimpleDirectoryReader(
+            input_dir=path,
+            recursive=True,
+            required_exts=[
+                ".pdf",
+                # ".docx",
+                # ".py",
+                ".txt",
+                # ".md",
+                ".png",
+                ".jpg",
+                ".jpeg",
+                # ".ts",
+            ],
+        )
+    except ValueError as e:
+        # Handle empty directory case
+        if "No files found" in str(e):
+            return []
+        raise e
+    
     splitter = TokenTextSplitter(chunk_size=6144)
     documents = []
     for docs in reader.iter_data():

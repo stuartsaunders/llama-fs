@@ -26,8 +26,8 @@ agentops.init(tags=["llama-fs"], auto_start_session=False)
 
 
 class Request(BaseModel):
-    path: Optional[str] = None
-    instruction: Optional[str] = None
+    path: str
+    instruction: str
     incognito: Optional[bool] = False
 
 
@@ -63,6 +63,12 @@ async def batch(request: Request):
         raise HTTPException(status_code=400, detail="Path does not exist in filesystem")
 
     summaries = await get_dir_summaries(path)
+    
+    # Handle empty directory case
+    if not summaries:
+        agentops.end_session("Success", end_state_reason="Empty directory processed")
+        return []
+    
     # Get file tree
     files = create_file_tree(summaries, session)
 
@@ -79,10 +85,10 @@ async def batch(request: Request):
     tr = LeftAligned(draw=BoxStyle(gfx=BOX_LIGHT, horiz_len=1))
     print(tr(tree))
 
-    # Prepend base path to dst_path
-    for file in files:
+    # Prepend base path to dst_path and add summaries
+    for i, file in enumerate(files):
         # file["dst_path"] = os.path.join(path, file["dst_path"])
-        file["summary"] = summaries[files.index(file)]["summary"]
+        file["summary"] = summaries[i]["summary"]
 
     agentops.end_session("Success", end_state_reason="Reorganized directory structure")
     return files

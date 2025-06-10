@@ -3,7 +3,7 @@ import json
 import os
 import time
 
-from groq import Groq
+import litellm
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
 from watchdog.observers import Observer
 
@@ -27,7 +27,7 @@ class Handler(FileSystemEventHandler):
         print(f"Updating summary for {file_path}")
         path = os.path.join(self.base_path, file_path)
         if not os.path.exists(path):
-            self.summaries_cache.pop(file_path)
+            self.summaries_cache.pop(file_path, None)
             return
         self.summaries_cache[file_path] = get_file_summary(path)
         self.summaries = list(self.summaries_cache.values())
@@ -108,15 +108,15 @@ Here are a few examples of good file naming conventions to emulate, based on the
 Include the above items in your response exactly as is, along all other proposed changes.
 """.strip()
 
-    client = Groq()
-    cmpl = client.chat.completions.create(
+    model = os.getenv("MODEL_TEXT", "groq/llama-3.3-70b-versatile")
+    cmpl = litellm.completion(
         messages=[
             {"content": FILE_PROMPT, "role": "system"},
             {"content": json.dumps(summaries), "role": "user"},
             {"content": WATCH_PROMPT, "role": "system"},
             {"content": json.dumps(fs_events), "role": "user"},
         ],
-        model="llama-3.1-70b-versatile",
+        model=model,
         response_format={"type": "json_object"},
         temperature=0,
     )
